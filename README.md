@@ -1,6 +1,6 @@
 # booster K1 for ROS2
 
-> 이 프로젝트는 [탑로보틱스](https://toprobotics.co.kr/) 와 [한국it교육원](https://www.hkit.kr/)이 함께합니다
+> 이 프로젝트는 [탑로보틱스](https://toprobotics.co.kr/) 와 [한국it교육원](https://www.hkit.kr/)이 함께합니다  
 <img src="images/toprobotics.png" width="200"> <img src="images/hkit.png" width="200">
 
 > 사용한 휴머노이드 로봇은 부스터로보틱스의 K1입니다 [booster_K1](https://www.booster.tech/)
