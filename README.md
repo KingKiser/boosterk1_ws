@@ -1,10 +1,10 @@
 # booster K1 for ROS2
 
 > 이 프로젝트는 [탑로보틱스](https://toprobotics.co.kr/) 와 [한국it교육원](https://www.hkit.kr/)이 함께합니다  
-<img src="images/toprobotics.png" width="200"> <img src="images/hkit.png" width="200">
+<img src="images/toprobotics.png" width="200"> <img src="images/hkit.png" width="200">  
 
-> 사용한 휴머노이드 로봇은 부스터로보틱스의 K1입니다 [booster_K1](https://www.booster.tech/)
 
+> 사용한 휴머노이드 로봇은 부스터로보틱스의 K1입니다 [booster_K1](https://www.booster.tech/)  
 > 기존 공식 [git](https://github.com/BoosterRobotics/booster_robotics_sdk_ros2) 계정에 있는 코드를 리팩토링 및 상세 가이드를 덧붙혔습니다
 
 **Version:** v1  
@@ -18,9 +18,9 @@
 - 기존 공식 사이트에는 해당 설정에 대한 가이드가 없어 공식 git 계정에서 받은 걸로 바로 빌드하시면 안됩니다
 - ~공식도 어떻게 연결하는지 잘 모르는 거 같다~
 
-<img src="images/jockto.jpg" width="300">
+<img src="images/jockto.jpg" width="250">
 
-<img src="images/molu.png" width="300">
+<img src="images/molu.png" width="250">
 
 - 먼저 FastDDS를 설치합니다
 
@@ -77,6 +77,7 @@ ip addr
 
 - PC에서는 해당 터미널에 xml 설정적용과 FastDDS 설정을 하신 후 해당 git의 코드를 이용하시기 바랍니다
 - (혹시 모르니 토픽이나 노드는 조회해보시길 바랍니다)
+- 해당 DDS를 적용해도 PC에 잡히지 않는 노드와 토픽은 다른 DDS 설정입니다 본 프로젝트의 가이드는 부스터로보틱스에서 제공하는 SDK를 기준으로 개발하여 수정했습니다
 
 ```bash
 export FASTRTPS_DEFAULT_PROFILES_FILE=$HOME/fastdds_profile.xml
@@ -103,7 +104,7 @@ source install/setup.bash
 
 - 현재 예제는 부스터로보틱스에서 준 예제 + 새로 개발한 예제를 포함하고 있습니다(키보드 동작)
 - 로봇 구매 대여 관련 연락은 탑로보틱스를 통해 부탁 드립니다(053-384-3023)
-- 개발자 연락은 박승휘(ham9301@gmail.com) 입니다
+- 개발자 질의 연락은 박승휘(ham9301@gmail.com) 입니다
 
 - 힘들었다
 
