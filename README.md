@@ -104,6 +104,9 @@ source install/setup.bash
 
 - 현재 예제는 부스터로보틱스에서 준 예제 + 새로 개발한 예제를 포함하고 있습니다(키보드 동작)
 - 로봇 구매 대여 관련 연락은 탑로보틱스를 통해 부탁 드립니다(053-384-3023)
+
+<img src="images/toprobotics.png" width="200"> 
+
 - 개발자 질의 연락은 박승휘(ham9301@gmail.com) 입니다
 
 - 힘들었다
