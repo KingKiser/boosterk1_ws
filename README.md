@@ -1,6 +1,7 @@
 # booster K1 for ROS2
 
-> 이 프로젝트는 [탑로보틱스](https://toprobotics.co.kr/) 와 [한국교육원](https://www.hkit.kr/)이 함께합니다
+> 이 프로젝트는 [탑로보틱스](https://toprobotics.co.kr/) 와 [한국it교육원](https://www.hkit.kr/)이 함께합니다
+<img src="images/toprobotics.png" width="200"> <img src="images/hkit.png" width="200">
 
 > 사용한 휴머노이드 로봇은 부스터로보틱스의 K1입니다 [booster_K1](https://www.booster.tech/)
 
@@ -17,9 +18,9 @@
 - 기존 공식 사이트에는 해당 설정에 대한 가이드가 없어 공식 git 계정에서 받은 걸로 바로 빌드하시면 안됩니다
 - ~공식도 어떻게 연결하는지 잘 모르는 거 같다~
 
-<img src="images/jockto.jpg" width="400">
+<img src="images/jockto.jpg" width="300">
 
-<img src="images/molu.png" width="400">
+<img src="images/molu.png" width="300">
 
 - 먼저 FastDDS를 설치합니다
 
