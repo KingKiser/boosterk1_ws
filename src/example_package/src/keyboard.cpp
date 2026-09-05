@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     auto client =
         node->create_client<
             booster_interface::srv::RpcService>(
-                "booster_rpc_service"
+                "/booster_rpc_service"
             );
 
 
