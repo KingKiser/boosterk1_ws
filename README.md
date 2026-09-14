@@ -7,8 +7,8 @@
 > 사용한 휴머노이드 로봇은 부스터로보틱스의 K1입니다 [booster_K1](https://www.booster.tech/)  
 > 기존 공식 [git](https://github.com/BoosterRobotics/booster_robotics_sdk_ros2) 계정에 있는 코드를 리팩토링 및 상세 가이드를 덧붙혔습니다
 
-**Version:** v1  
-**Last Updated:** 2026.08.29  
+**Version:** v2  
+**Last Updated:** 2026.09.14  
 **Author:** 박승휘
 
 ---
@@ -62,6 +62,21 @@ ip addr
 > `<PC_NETWORK_IP>`에는 로봇과 통신하는 PC의 이더넷 인터페이스에 할당된 실제 IP 주소를 입력합니다.
 
 - 또한 사용하시는 휴머노이드의 fastdds_profile.xml과 같은 폴더에 있는 fastdds_profile_udp_only.xml 에는 현재 로봇의 ssh ip를 추가하여 수정합니다
+- 다른 경로에 있는 DDS xml도 수정해야 하므로 
+
+```bash
+sudo nano /opt/booster/BoosterRos2/fastdds_profile.xml
+```
+
+```bash
+sudo nano /opt/booster/BoosterRos2/fastdds_profile_udp_only.xml
+```
+
+```bash
+sudo nano /opt/booster/config/dds_configs/single-board_configs/fastdds_profile_udp_only.xml
+```
+
+- 위 경로에 있는 xml은 모두 로봇 IP를 넣어 DDS를 맞춰 줍니다
 
 ```xml
 <interfaceWhiteList>
@@ -92,8 +107,84 @@ pkill -f _ros2_daemon
 
 ```bash
 cd boosterk1_ws
-colcon build
+colcon build --symlink-install
 source install/setup.bash
+```
+
+- symlink 빌드를 해야 해당 인터페이스 사양에 맞게 로봇을 부위별로 움직이는 것이 가능합니다
+
+예
+
+```bash
+#전진
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2001, body: '{\"vx\":0.1,\"vy\":0.0,\"vyaw\":0.0}'}}"
+```
+
+```bash
+#후진
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2001, body: '{\"vx\":-0.1,\"vy\":0.0,\"vyaw\":0.0}'}}"
+```
+
+```bash
+#왼쪽으로 이동
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2001, body: '{\"vx\":0.0,\"vy\":0.1,\"vyaw\":0.0}'}}"
+```
+
+```bash
+#오른쪽으로 이동
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2001, body: '{\"vx\":0.0,\"vy\":-0.1,\"vyaw\":0.0}'}}"
+```
+
+```bash
+#반시계 방향
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2001, body: '{\"vx\":0.0,\"vy\":0.0,\"vyaw\":0.2}'}}"
+```
+
+```bash
+#시계 방향
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2001, body: '{\"vx\":0.0,\"vy\":0.0,\"vyaw\":-0.2}'}}"
+```
+
+```bash
+#왼쪽 보기
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2004, body: '{\"pitch\":0.0,\"yaw\":0.3}'}}"
+```
+
+```bash
+#정면 보기
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2004, body: '{\"pitch\":0.0,\"yaw\":0.0}'}}"
+```
+
+```bash
+#오른쪽 보기
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2004, body: '{\"pitch\":0.0,\"yaw\":-0.3}'}}"
+```
+
+**0.3은 라디안 각도임 0.3 rad ≈ 17.2° 정도
+
+```bsah
+#팔 가만히 있는 명령어
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2023, body: ''}}"
 ```
 
 ![aronaddabong](images/aronaddabong.png)
