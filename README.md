@@ -76,6 +76,17 @@ sudo nano /opt/booster/BoosterRos2/fastdds_profile_udp_only.xml
 sudo nano /opt/booster/config/dds_configs/single-board_configs/fastdds_profile_udp_only.xml
 ```
 
+```bash
+sudo nano /opt/booster/config/dds_configs/single-board_configs/fastdds_profile.xml
+```
+
+| 경로 | 주 용도 |
+|--------|-------------|
+| **[/opt/booster/BoosterRos2/fastdds_profile.xml]**   **[nano /opt/booster/BoosterRos2/fastdds_profile_udp_only.xml]**| Booster Agent / 일반 ROS2 환경 |
+| **[/opt/booster/config/dds_configs/single-board_configs/fastdds_profile_udp_only.xml]** | Motion / RPC / Audio 계열 |
+| **[/opt/booster/config/dds_configs/single-board_configs/fastdds_profile.xml]** | Camera / Video / YOLO / Lui 계열 |
+
+
 - 위 경로에 있는 xml은 모두 로봇 IP를 넣어 DDS를 맞춰 줍니다
 
 ```xml
@@ -180,7 +191,21 @@ booster_interface/srv/RpcService \
 
 **0.3은 라디안 각도임 0.3 rad ≈ 17.2° 정도
 
-```bsah
+```bash
+#왼팔 올려
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2009, body: '{\"target_posture\":{\"position\":{\"x\":0.35,\"y\":0.25,\"z\":0.10},\"orientation\":{\"roll\":0.0,\"pitch\":0.0,\"yaw\":0.0}},\"time_millis\":2000,\"hand_index\":0,\"has_aux\":false,\"new_version\":false}'}}"
+```
+
+```bash
+#오른팔 올려
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2009, body: '{\"target_posture\":{\"position\":{\"x\":0.35,\"y\":-0.25,\"z\":0.10},\"orientation\":{\"roll\":0.0,\"pitch\":0.0,\"yaw\":0.0}},\"time_millis\":2000,\"hand_index\":1,\"has_aux\":false,\"new_version\":false}'}}"
+```
+
+```bash
 #팔 가만히 있는 명령어
 ros2 service call /booster_rpc_service \
 booster_interface/srv/RpcService \

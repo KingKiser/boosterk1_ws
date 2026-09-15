@@ -41,6 +41,12 @@ install(PROGRAMS
   RENAME client_py
 )
 
+install(PROGRAMS
+  example_package/camera_view.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME camera_view_py
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
