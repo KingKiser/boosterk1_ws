@@ -82,9 +82,10 @@ sudo nano /opt/booster/config/dds_configs/single-board_configs/fastdds_profile.x
 
 | 경로 | 주 용도 |
 |--------|-------------|
-| **[/opt/booster/BoosterRos2/fastdds_profile.xml]**   **[nano /opt/booster/BoosterRos2/fastdds_profile_udp_only.xml]**| Booster Agent / 일반 ROS2 환경 |
-| **[/opt/booster/config/dds_configs/single-board_configs/fastdds_profile_udp_only.xml]** | Motion / RPC / Audio 계열 |
-| **[/opt/booster/config/dds_configs/single-board_configs/fastdds_profile.xml]** | Camera / Video / YOLO / Lui 계열 |
+| **/opt/booster/BoosterRos2/fastdds_profile.xml**  
+**/opt/booster/BoosterRos2/fastdds_profile_udp_only.xml** | Booster Agent / 일반 ROS2 환경 |
+| **/opt/booster/config/dds_configs/single-board_configs/fastdds_profile_udp_only.xml** | Motion / RPC / Audio 계열 |
+| **/opt/booster/config/dds_configs/single-board_configs/fastdds_profile.xml** | Camera / Video / YOLO / Lui 계열 |
 
 
 - 위 경로에 있는 xml은 모두 로봇 IP를 넣어 DDS를 맞춰 줍니다
@@ -114,7 +115,7 @@ ros2 daemon stop
 pkill -f _ros2_daemon
 ```
 
-이후에 빌드 후 실행하시면 됩니다
+- 이후에 빌드 후 실행하시면 됩니다
 
 ```bash
 cd boosterk1_ws
@@ -122,9 +123,10 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-- symlink 빌드를 해야 해당 인터페이스 사양에 맞게 로봇을 부위별로 움직이는 것이 가능합니다
+- 인터페이스는 symlink 빌드를 해야 해당 인터페이스 사양에 맞게 로봇을 부위별로 움직이는 것이 가능합니다
+- 이후 다른 패키지는 colcon build --packages-select <패키지 명> 으로 빌드하시는 걸 추천드립니다
 
-예
+- 예
 
 ```bash
 #전진
@@ -224,6 +226,8 @@ booster_interface/srv/RpcService \
 <img src="images/toprobotics.png" width="200"> 
 
 - 개발자 질의 연락은 박승휘(ham9301@gmail.com) 입니다
+
+- 그 외 외력 감지에 관한 내용 정리 [링크](https://app.notion.com/p/3dc651941b0b80a3a7c5ce84d3978291?source=copy_link)
 
 - 힘들었다
 
