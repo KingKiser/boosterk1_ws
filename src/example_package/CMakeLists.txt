@@ -65,6 +65,12 @@ install(PROGRAMS
   RENAME joint_state_sub
 )
 
+install(PROGRAMS
+  example_package/keyboard.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME keyboard_py
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
