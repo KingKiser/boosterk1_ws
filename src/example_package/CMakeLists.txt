@@ -47,6 +47,24 @@ install(PROGRAMS
   RENAME camera_view_py
 )
 
+install(PROGRAMS
+  example_package/custom_arm_example.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME custom_arm_example
+)
+
+install(
+  FILES
+  example_package/change.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  example_package/joint_state_sub.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME joint_state_sub
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
