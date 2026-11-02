@@ -173,7 +173,7 @@ def main():
         node.get_logger().info(f"[INIT] 현재 모드: {current}")
 
 
-        if current != RobotMode.kCustom:
+        if current != RobotMode.kWalking:
             raise RuntimeError(
                 f"시작 모드가 Walking이 아님: {current}"
             )
