@@ -329,16 +329,15 @@ def main(args=None):
         node.get_logger().info("[INIT] DDS Discovery 대기")
         time.sleep(3.0)
 
-        current = get_mode_retry(client, stop, node)
-        node.get_logger().info(f"[INIT] 현재 모드: {current}")
-
         change_mode_safe(
                     client,
                     RobotMode.kWalking,
                     stop,
                     node
                 )
-
+        
+        current = get_mode_retry(client, stop, node)
+        node.get_logger().info(f"[INIT] 현재 모드: {current}")
 
         if current == RobotMode.kWalking:
             node.run()

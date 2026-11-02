@@ -7,8 +7,8 @@
 > 사용한 휴머노이드 로봇은 부스터로보틱스의 K1입니다 [booster_K1](https://www.booster.tech/)  
 > 기존 공식 [git](https://github.com/BoosterRobotics/booster_robotics_sdk_ros2) 계정에 있는 코드를 리팩토링 및 상세 가이드를 덧붙혔습니다
 
-**Version:** v2  
-**Last Updated:** 2026.09.14  
+**Version:** v3  
+**Last Updated:** 2026.11.02  
 **Author:** 박승휘
 
 ---
@@ -122,11 +122,33 @@ cd boosterk1_ws
 colcon build --symlink-install
 source install/setup.bash
 ```
+## 휴머노이드 로봇의 모드 변경  
+
+- 원격으로 로봇의 모드를 변경하는 서비스 콜입니다
+
+```bash
+#stand
+ros2 service call /booster_rpc_service booster_interface/srv/RpcService \
+"{msg: {api_id: 2000, body: '{\"mode\":1}'}}"
+```
+
+```bash
+#walk
+ros2 service call /booster_rpc_service booster_interface/srv/RpcService \
+"{msg: {api_id: 2000, body: '{\"mode\":2}'}}"
+```
+
+
 
 - 인터페이스는 symlink 빌드를 해야 해당 인터페이스 사양에 맞게 로봇을 부위별로 움직이는 것이 가능합니다
 - 이후 다른 패키지는 colcon build --packages-select <패키지 명> 으로 빌드하시는 걸 추천드립니다
 
 - 예
+
+```bash
+colcon build --packages-select example_package
+```
+- 움직이는 서비스 콜 명령어
 
 ```bash
 #전진
@@ -168,6 +190,13 @@ booster_interface/srv/RpcService \
 ros2 service call /booster_rpc_service \
 booster_interface/srv/RpcService \
 "{msg: {api_id: 2001, body: '{\"vx\":0.0,\"vy\":0.0,\"vyaw\":-0.2}'}}"
+```
+
+```bash
+#정지
+ros2 service call /booster_rpc_service \
+booster_interface/srv/RpcService \
+"{msg: {api_id: 2001, body: '{\"vx\":0.0,\"vy\":0.0,\"vyaw\":0.0}'}}"
 ```
 
 ```bash
