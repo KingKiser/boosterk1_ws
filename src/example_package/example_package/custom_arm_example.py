@@ -8,34 +8,59 @@ import time
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+
 from booster_interface.msg import LowState, LowCmd, MotorCmd
-from booster_robotics_sdk_python import B1LocoClient, ChannelFactory, RobotMode
+from booster_robotics_sdk_python import (
+    B1LocoClient,
+    ChannelFactory,
+    RobotMode,
+)
 
 import change as G
 
+
 N = 22
+DDS_WAIT = 3.0
+RPC_RETRY = 5
+RPC_INTERVAL = 1.0
+
 
 class AmrSamplePub(Node):
 
     def __init__(self):
-        super().__init__('amr_sample_pub')
-        pub_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE )
+        super().__init__("amr_sample_pub")
 
-        sub_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
-        self.pub = self.create_publisher(LowCmd, "joint_ctrl", pub_qos)
+        pub_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE
+        )
+        sub_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT
+        )
+
+        self.pub = self.create_publisher(
+            LowCmd, "joint_ctrl", pub_qos
+        )
+        self.sub = self.create_subscription(
+            LowState, "low_state", self.receive, sub_qos
+        )
+
         self.recent = {}
-        self.sub = self.create_subscription(LowState, "low_state", self.recieve, sub_qos)
-
-        self.sub
         self.cmd = LowCmd()
         self.cmd.cmd_type = LowCmd.CMD_TYPE_SERIAL
         self.cmd.motor_cmd = [MotorCmd() for _ in range(N)]
-    def recieve(self, msg):
-        self.recent["q"] = np.array([m.q for m in msg.motor_state_serial], np.float32)
+
+    def receive(self, msg):
+        q = np.array(
+            [m.q for m in msg.motor_state_serial],
+            dtype=np.float32
+        )
+        if len(q) >= N:
+            self.recent["q"] = q[:N]
 
     def send(self, q):
-
         for i in range(N):
             m = self.cmd.motor_cmd[i]
             m.q = float(q[i])
@@ -44,88 +69,242 @@ class AmrSamplePub(Node):
             m.kp = float(G.KP[i])
             m.kd = float(G.KD[i])
             m.weight = 0.0
+
         self.pub.publish(self.cmd)
 
 
-def main():
-    # ── SDK(모드 바꾸기) 와 ROS 2(관절 상태·명령) 준비 ────────────────────
-    ChannelFactory.Instance().Init(0, "wlp3s0")
-    client = B1LocoClient()
-    client.Init()
-
-    rclpy.init()
-    amr_sample_pub = AmrSamplePub()
-    #threading.Thread(target=rclpy.spin, args=(amr_sample_pub,), daemon=True).start()
-    spin_thread = threading.Thread(
-        target=rclpy.spin,
-        args=(amr_sample_pub,),
-        daemon=False
-    )
-    spin_thread.start()
-
-    stop = threading.Event()
-    signal.signal(signal.SIGINT, lambda *_: stop.set())        # Ctrl+C: 사람이 내린 정지 — 되돌리지 않는다
-
-
-    t0 = time.time()
-    while "q" not in amr_sample_pub.recent:
-        if time.time() - t0 > 5:
-            raise RuntimeError("/low_state 를 5초 동안 못 받았다 — 기체가 Prepare/Walking 모드인지 확인")
-        time.sleep(0.01)
-    while amr_sample_pub.pub.get_subscription_count() == 0:
+def get_mode_retry(client, stop, attempts=RPC_RETRY):
+    for i in range(attempts):
         if stop.is_set():
+            raise RuntimeError("사용자 정지")
+
+        try:
+            mode = client.GetMode().mode
+            print(f"[RPC] GetMode 성공: {mode}", flush=True)
+            return mode
+        except RuntimeError as e:
+            print(
+                f"[RPC] GetMode 실패 {i+1}/{attempts}: {e}",
+                flush=True
+            )
+            if i + 1 < attempts:
+                time.sleep(RPC_INTERVAL)
+
+    raise RuntimeError("GetMode RPC 통신 확인 실패")
+
+
+def change_mode_safe(client, target, stop):
+    for i in range(RPC_RETRY):
+        if stop.is_set():
+            raise RuntimeError("사용자 정지")
+
+        # 먼저 현재 모드를 확인한다.
+        current = get_mode_retry(client, stop)
+
+        if current == target:
+            print(f"[MODE] 이미 {target} 상태", flush=True)
             return
-        time.sleep(0.5)
 
-    amr_sample_pub.start_angle = amr_sample_pub.recent["q"].copy()
+        print(
+            f"[MODE] 전환 요청 {i+1}/{RPC_RETRY}: "
+            f"{current} -> {target}",
+            flush=True
+        )
 
-    amr_sample_pub.get_logger().info(
-        f"지금 자세(도) 어깨롤 "
-        f"{np.round(np.degrees(amr_sample_pub.start_angle[[3, 7]]), 1)}"
+        try:
+            client.ChangeMode(target)
+        except RuntimeError as e:
+            print(f"[MODE] ChangeMode 오류: {e}", flush=True)
+
+        # 타임아웃이 발생해도 전환됐을 수 있으므로 확인한다.
+        time.sleep(RPC_INTERVAL)
+
+        try:
+            current = get_mode_retry(client, stop)
+            if current == target:
+                print(f"[MODE] 전환 확인 성공: {target}", flush=True)
+                return
+        except RuntimeError as e:
+            print(f"[MODE] 상태 확인 실패: {e}", flush=True)
+
+        if i + 1 < RPC_RETRY:
+            time.sleep(RPC_INTERVAL)
+
+    raise RuntimeError(
+        f"모드 전환 실패: 목표 모드 {target} 확인 불가"
     )
+
+
+def wait_until(stop, deadline):
+    while time.monotonic() < deadline:
+        if stop.is_set():
+            return False
+        time.sleep(0.0005)
+    return not stop.is_set()
+
+
+def main():
+    stop = threading.Event()
+
+    signal.signal(
+        signal.SIGINT,
+        lambda *_: stop.set()
+    )
+
+    node = None
+    spin_thread = None
+    client = None
     custom_mode_entered = False
 
     try:
-        # ② 지금 각도 그대로 한 번 보내 두고 커스텀 모드로
-        amr_sample_pub.send(amr_sample_pub.start_angle)
+        # 1. Booster SDK 초기화
+        ChannelFactory.Instance().Init(0, "wlp3s0")
+        client = B1LocoClient()
+        client.Init()
+
+        print("[INIT] DDS Discovery 대기", flush=True)
+        time.sleep(DDS_WAIT)
+
+        # 2. RPC 연결 확인
+        current = get_mode_retry(client, stop)
+        print(f"[INIT] 현재 모드: {current}", flush=True)
+
+        if current != RobotMode.kWalking:
+            raise RuntimeError(
+                f"시작 모드가 Walking이 아님: {current}"
+            )
+
+        # 3. ROS 2 초기화
+        rclpy.init()
+        node = AmrSamplePub()
+
+        spin_thread = threading.Thread(
+            target=rclpy.spin,
+            args=(node,),
+            daemon=False
+        )
+        spin_thread.start()
+
+        # 4. LowState 수신 대기
+        deadline = time.monotonic() + 5.0
+
+        while "q" not in node.recent:
+            if stop.is_set():
+                return
+            if time.monotonic() > deadline:
+                raise RuntimeError("/low_state 수신 실패")
+            time.sleep(0.01)
+
+        # 5. joint_ctrl 구독자 확인
+        deadline = time.monotonic() + 5.0
+
+        while node.pub.get_subscription_count() == 0:
+            if stop.is_set():
+                return
+            if time.monotonic() > deadline:
+                raise RuntimeError("/joint_ctrl 구독자 없음")
+            time.sleep(0.1)
+
+        start_angle = node.recent["q"].copy()
+
+        node.get_logger().info(
+            "지금 자세(도) 어깨롤 "
+            f"{np.round(np.degrees(start_angle[[3, 7]]), 1)}"
+        )
+
+        # 6. 현재 자세 명령을 미리 발행
+        node.send(start_angle)
         time.sleep(0.1)
-        client.ChangeMode(RobotMode.kCustom)
-        amr_sample_pub.get_logger().info("커스텀 모드 — 제조사 균형 제어가 꺼졌다")
+
+        # 7. Custom 모드 전환 및 확인
+        change_mode_safe(
+            client,
+            RobotMode.kCustom,
+            stop
+        )
         custom_mode_entered = True
 
-        # ③ 1초 동안 준비 자세로 (2ms × 500)
-        시작 = time.monotonic()
-        for i, q in enumerate(np.linspace(amr_sample_pub.start_angle, G.준비각, num=500)):
-            if stop.is_set():
-                return
-            amr_sample_pub.send(q)
-            while time.monotonic() < 시작 + (i + 1) * 0.002:
-                time.sleep(0.0002)
+        node.get_logger().info(
+            "Custom 모드 진입 확인"
+        )
 
-        # ④ 팔 동작 50Hz
-        _, 궤적 = G.궤적()
-        시작 = time.monotonic()
-        for k, q in enumerate(궤적):
+        # 8. 준비 자세 이동 (2ms x 500)
+        start = time.monotonic()
+
+        for i, q in enumerate(
+            np.linspace(start_angle, G.준비각, num=500)
+        ):
             if stop.is_set():
-                amr_sample_pub.get_logger().info("Ctrl+C — 멈춘다")
                 return
-            amr_sample_pub.send(q)
-            while time.monotonic() < 시작 + (k + 1) * 0.02:
-                time.sleep(0.0005)
-        amr_sample_pub.get_logger().info("팔 동작 끝")
+
+            node.send(q)
+
+            if not wait_until(
+                stop,
+                start + (i + 1) * 0.002
+            ):
+                return
+
+        # 9. 팔 궤적 실행 (50Hz)
+        _, trajectory = G.궤적()
+        start = time.monotonic()
+
+        for k, q in enumerate(trajectory):
+            if stop.is_set():
+                node.get_logger().info("사용자 정지")
+                return
+
+            node.send(q)
+
+            if not wait_until(
+                stop,
+                start + (k + 1) * 0.02
+            ):
+                return
+
+        node.get_logger().info("팔 동작 완료")
 
     finally:
-        if custom_mode_entered:
+        # Custom 전환 요청이 타임아웃됐더라도
+        # 실제 모드가 바뀌었을 가능성을 확인한다.
+        if client is not None:
             try:
-                client.ChangeMode(RobotMode.kWalking)
-                amr_sample_pub.get_logger().info("Walking 모드 복귀 요청 성공")
-            except Exception as e:
-                amr_sample_pub.get_logger().error(
-                    f"Walking 모드 복귀 실패: {e}"
+                recovery_stop = threading.Event()
+                mode = get_mode_retry(
+                    client, recovery_stop, attempts=3
                 )
 
-        amr_sample_pub.destroy_node()
-        rclpy.shutdown()
+                if mode == RobotMode.kCustom:
+                    custom_mode_entered = True
+
+                if custom_mode_entered:
+                    print("[CLEANUP] Walking 복귀 시도", flush=True)
+                    change_mode_safe(
+                        client,
+                        RobotMode.kWalking,
+                        recovery_stop
+                    )
+                    print("[CLEANUP] Walking 복귀 확인", flush=True)
+
+            except Exception as e:
+                print(
+                    f"[CRITICAL] 모드 복귀 확인 실패: {e}",
+                    flush=True
+                )
+                print(
+                    "[CRITICAL] 로봇 상태를 직접 확인해야 함",
+                    flush=True
+                )
+
+        # ROS 2 종료
+        if rclpy.ok():
+            rclpy.shutdown()
+
+        if spin_thread is not None:
+            spin_thread.join(timeout=3.0)
+
+        if node is not None:
+            node.destroy_node()
 
 
 if __name__ == "__main__":

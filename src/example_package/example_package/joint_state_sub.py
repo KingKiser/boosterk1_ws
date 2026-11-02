@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import math
+import math #파이썬 기본 수학 연산 라이브러리
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import JointState
+from rclpy.qos import QoSProfile, ReliabilityPolicy #주파수의 또다른 옵션
+from sensor_msgs.msg import JointState #ros2의 기본 관절 측정 인터페이스
 
 
-class ArmJointStateSub(Node):
+class ArmJointStateSub(Node): 
 
     def __init__(self):
         super().__init__('arm_joint_state_sub')
 
         sub_qos = QoSProfile(
             depth=10,
-            reliability=ReliabilityPolicy.BEST_EFFORT
+            reliability=ReliabilityPolicy.BEST_EFFORT #qos 정의
         )
 
         self.sub = self.create_subscription(
-            JointState,
-            '/joint_states',
-            self.receive,
+            JointState,#기본 관절 측정 인터페이스 사요
+            '/joint_states', #수신할 토픽 이름
+            self.receive, #토픽 받아서 어쩔건데
             sub_qos
         )
 
@@ -54,8 +54,9 @@ class ArmJointStateSub(Node):
         if len(msg.effort) < 10:
             self.get_logger().warn("Effort 데이터 부족")
             return
-
+        #joint_state 내부에서도 토픽이 다양하게 있다
         logs = ["\n========== ARM JOINT STATES =========="]
+        #터미널에서 보기 좋게 분기하려고 넣음
 
         for index in range(2, 10):
 
@@ -65,7 +66,7 @@ class ArmJointStateSub(Node):
             velocity = msg.velocity[index]
             effort = msg.effort[index]
 
-            position_deg = math.degrees(position)
+            position_deg = math.degrees(position) #관절 각도 joint_state/position[2]
 
             logs.append(
                 f"[{index}] {name:<22} | "
