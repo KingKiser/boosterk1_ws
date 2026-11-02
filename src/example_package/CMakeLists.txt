@@ -18,7 +18,12 @@ ament_python_install_package(${PROJECT_NAME})
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
+include_directories(include 
+  example_package/include/example_package
+)
+
 set(EXECUTABLES
+  custom_arm_example_cpp
   client
   arm_sample
   double_arm
@@ -26,7 +31,15 @@ set(EXECUTABLES
 )
 
 foreach(target ${EXECUTABLES})
-  add_executable(${target}  src/${target}.cpp)
+  if (${target} STREQUAL "custom_arm_example_cpp")
+    add_executable(${target}  
+      src/custom_arm_cpp/custom_arm_example.cpp
+      src/custom_arm_cpp/custom_arm_node.cpp
+      src/custom_arm_cpp/custom_arm_rpc.cpp
+      )
+  else()
+    add_executable(${target}  src/${target}.cpp)
+  endif()
   ament_target_dependencies(${target} 
     rclcpp 
     std_msgs
@@ -35,41 +48,21 @@ foreach(target ${EXECUTABLES})
   install(TARGETS ${target} DESTINATION lib/${PROJECT_NAME})
 endforeach()
 
-install(PROGRAMS
-  example_package/client.py
-  DESTINATION lib/${PROJECT_NAME}
-  RENAME client_py
+set(EXECUTABLES_PY
+  client
+  camera_view
+  custom_arm_example
+  joint_state_sub
+  keyboard
 )
 
-install(PROGRAMS
-  example_package/camera_view.py
-  DESTINATION lib/${PROJECT_NAME}
-  RENAME camera_view_py
-)
-
-install(PROGRAMS
-  example_package/custom_arm_example.py
-  DESTINATION lib/${PROJECT_NAME}
-  RENAME custom_arm_example
-)
-
-install(
-  FILES
-  example_package/change.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(PROGRAMS
-  example_package/joint_state_sub.py
-  DESTINATION lib/${PROJECT_NAME}
-  RENAME joint_state_sub
-)
-
-install(PROGRAMS
-  example_package/keyboard.py
-  DESTINATION lib/${PROJECT_NAME}
-  RENAME keyboard_py
-)
+foreach(target ${EXECUTABLES_PY})
+  install(PROGRAMS
+    example_package/${target}.py
+    DESTINATION lib/${PROJECT_NAME}
+    RENAME ${target}_py
+  )
+endforeach()
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

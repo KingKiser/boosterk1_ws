@@ -255,7 +255,7 @@ booster_interface/srv/RpcService \
 
 <img src="images/toprobotics.png" width="200"> 
 
-- 개발자 질의 연락은 박승휘(ham9301@gmail.com) 입니다
+- 개발자 질의 연락은 박승휘(seunghwi@toprobotedu.co.kr) 입니다
 
 - 그 외 외력 감지에 관한 내용 정리 [링크](https://app.notion.com/p/3dc651941b0b80a3a7c5ce84d3978291?source=copy_link)
 

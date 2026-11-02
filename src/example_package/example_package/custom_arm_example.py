@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import signal
-import threading
-import time
+import signal #신호 
+import threading #멀티 스레드의 의의 : 통신 모드 바꾸는게 아예 스레드 분기
+import time #
 
-import numpy as np
+import numpy as np #
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
-from booster_interface.msg import LowState, LowCmd, MotorCmd
+from booster_interface.msg import LowState, LowCmd, MotorCmd #우리 패키지 인터페이스
 from booster_robotics_sdk_python import (
     B1LocoClient,
     ChannelFactory,
     RobotMode,
 )
 
-import change as G
+from example_package import change as G #조인트 각도 어떻게 설정 
 
 
 N = 22
@@ -41,16 +41,16 @@ class AmrSamplePub(Node):
         )
 
         self.pub = self.create_publisher(
-            LowCmd, "joint_ctrl", pub_qos
+            LowCmd, "joint_ctrl", pub_qos #토픽 날려서 팔 각도 조절 0번 부터 21 까지 다보냄 
         )
         self.sub = self.create_subscription(
-            LowState, "low_state", self.receive, sub_qos
+            LowState, "low_state", self.receive, sub_qos #피드백 루프 서브스크라이버 
         )
 
-        self.recent = {}
+        self.recent = {} #피드백 루프 저장
         self.cmd = LowCmd()
-        self.cmd.cmd_type = LowCmd.CMD_TYPE_SERIAL
-        self.cmd.motor_cmd = [MotorCmd() for _ in range(N)]
+        self.cmd.cmd_type = LowCmd.CMD_TYPE_SERIAL #값 1
+        self.cmd.motor_cmd = [MotorCmd() for _ in range(N)] #조인트 배열
 
     def receive(self, msg):
         q = np.array(
@@ -175,7 +175,7 @@ def main():
 
 
 
-        spin_thread = threading.Thread(
+        spin_thread = threading.Thread( #나중에 ros 스레드로 바꿀것
             target=rclpy.spin,
             args=(node,),
             daemon=False
