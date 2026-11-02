@@ -73,19 +73,18 @@ class AmrSamplePub(Node):
         self.pub.publish(self.cmd)
 
 
-def get_mode_retry(client, stop, attempts=RPC_RETRY):
+def get_mode_retry(client, stop, Node, attempts=RPC_RETRY):
     for i in range(attempts):
         if stop.is_set():
             raise RuntimeError("사용자 정지")
 
         try:
             mode = client.GetMode().mode
-            print(f"[RPC] GetMode 성공: {mode}", flush=True)
+            Node.get_logger().info(f"[RPC] GetMode 성공: {mode}")
             return mode
         except RuntimeError as e:
-            print(
-                f"[RPC] GetMode 실패 {i+1}/{attempts}: {e}",
-                flush=True
+            Node.get_logger().error(
+                f"[RPC] GetMode 실패 {i+1}/{attempts}: {e}"
             )
             if i + 1 < attempts:
                 time.sleep(RPC_INTERVAL)
@@ -93,39 +92,38 @@ def get_mode_retry(client, stop, attempts=RPC_RETRY):
     raise RuntimeError("GetMode RPC 통신 확인 실패")
 
 
-def change_mode_safe(client, target, stop):
+def change_mode_safe(client, target, stop, Node):
     for i in range(RPC_RETRY):
         if stop.is_set():
             raise RuntimeError("사용자 정지")
 
         # 먼저 현재 모드를 확인한다.
-        current = get_mode_retry(client, stop)
+        current = get_mode_retry(client, stop, Node)
 
         if current == target:
-            print(f"[MODE] 이미 {target} 상태", flush=True)
+            Node.get_logger().info(f"[MODE] 이미 {target} 상태")
             return
 
-        print(
+        Node.get_logger().info(
             f"[MODE] 전환 요청 {i+1}/{RPC_RETRY}: "
             f"{current} -> {target}",
-            flush=True
         )
 
         try:
             client.ChangeMode(target)
         except RuntimeError as e:
-            print(f"[MODE] ChangeMode 오류: {e}", flush=True)
+            Node.get_logger().info(f"[MODE] ChangeMode 오류: {e}")
 
         # 타임아웃이 발생해도 전환됐을 수 있으므로 확인한다.
         time.sleep(RPC_INTERVAL)
 
         try:
-            current = get_mode_retry(client, stop)
+            current = get_mode_retry(client, stop, Node)
             if current == target:
-                print(f"[MODE] 전환 확인 성공: {target}", flush=True)
+                Node.get_logger().info(f"[MODE] 전환 확인 성공: {target}")
                 return
         except RuntimeError as e:
-            print(f"[MODE] 상태 확인 실패: {e}", flush=True)
+            Node.get_logger().error(f"[MODE] 상태 확인 실패: {e}")
 
         if i + 1 < RPC_RETRY:
             time.sleep(RPC_INTERVAL)
@@ -150,8 +148,9 @@ def main():
         signal.SIGINT,
         lambda *_: stop.set()
     )
-
-    node = None
+    rclpy.init()
+    node = AmrSamplePub()
+    
     spin_thread = None
     client = None
     custom_mode_entered = False
@@ -162,21 +161,19 @@ def main():
         client = B1LocoClient()
         client.Init()
 
-        print("[INIT] DDS Discovery 대기", flush=True)
+        node.get_logger().info("[INIT] DDS Discovery 대기")
         time.sleep(DDS_WAIT)
 
         # 2. RPC 연결 확인
-        current = get_mode_retry(client, stop)
-        print(f"[INIT] 현재 모드: {current}", flush=True)
+        current = get_mode_retry(client, stop, node)
+        node.get_logger().info(f"[INIT] 현재 모드: {current}")
 
         if current != RobotMode.kWalking:
             raise RuntimeError(
                 f"시작 모드가 Walking이 아님: {current}"
             )
 
-        # 3. ROS 2 초기화
-        rclpy.init()
-        node = AmrSamplePub()
+
 
         spin_thread = threading.Thread(
             target=rclpy.spin,
@@ -220,7 +217,8 @@ def main():
         change_mode_safe(
             client,
             RobotMode.kCustom,
-            stop
+            stop,
+            node
         )
         custom_mode_entered = True
 
@@ -232,7 +230,7 @@ def main():
         start = time.monotonic()
 
         for i, q in enumerate(
-            np.linspace(start_angle, G.준비각, num=500)
+            np.linspace(start_angle, G.pre_angle, num=500)
         ):
             if stop.is_set():
                 return
@@ -246,7 +244,7 @@ def main():
                 return
 
         # 9. 팔 궤적 실행 (50Hz)
-        _, trajectory = G.궤적()
+        _, trajectory = G.moving_way()
         start = time.monotonic()
 
         for k, q in enumerate(trajectory):
@@ -271,29 +269,28 @@ def main():
             try:
                 recovery_stop = threading.Event()
                 mode = get_mode_retry(
-                    client, recovery_stop, attempts=3
+                    client, recovery_stop, node, attempts=3
                 )
 
                 if mode == RobotMode.kCustom:
                     custom_mode_entered = True
 
                 if custom_mode_entered:
-                    print("[CLEANUP] Walking 복귀 시도", flush=True)
+                    node.get_logger().info("[CLEANUP] Walking 복귀 시도")
                     change_mode_safe(
                         client,
                         RobotMode.kWalking,
-                        recovery_stop
+                        recovery_stop,
+                        node
                     )
-                    print("[CLEANUP] Walking 복귀 확인", flush=True)
+                    node.get_logger().info("[CLEANUP] Walking 복귀 확인")
 
             except Exception as e:
-                print(
+                node.get_logger().fatal(
                     f"[CRITICAL] 모드 복귀 확인 실패: {e}",
-                    flush=True
                 )
-                print(
+                node.get_logger().warn(
                     "[CRITICAL] 로봇 상태를 직접 확인해야 함",
-                    flush=True
                 )
 
         # ROS 2 종료

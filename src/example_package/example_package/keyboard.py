@@ -13,6 +13,12 @@ from rclpy.node import Node
 
 from booster_interface.srv import RpcService
 from booster_interface.msg import BoosterApiReqMsg
+from booster_robotics_sdk_python import (
+    B1LocoClient,
+    ChannelFactory,
+    RobotMode,
+)
+import threading
 
 
 class KeyboardMoveNode(Node):
@@ -242,15 +248,99 @@ ESC : 종료
                 old_settings
             )
 
+def get_mode_retry(client, stop, Node, attempts=5):
+    for i in range(attempts):
+        if stop.is_set():
+            raise RuntimeError("사용자 정지")
+
+        try:
+            mode = client.GetMode().mode
+            Node.get_logger().info(f"[RPC] GetMode 성공: {mode}")
+            return mode
+        except RuntimeError as e:
+            Node.get_logger().error(
+                f"[RPC] GetMode 실패 {i+1}/{attempts}: {e}"
+            )
+            if i + 1 < attempts:
+                time.sleep(1.0)
+
+    raise RuntimeError("GetMode RPC 통신 확인 실패")
+
+
+def change_mode_safe(client, target, stop, Node):
+    for i in range(5):
+        if stop.is_set():
+            raise RuntimeError("사용자 정지")
+
+        # 먼저 현재 모드를 확인한다.
+        current = get_mode_retry(client, stop, Node)
+
+        if current == target:
+            Node.get_logger().info(f"[MODE] 이미 {target} 상태")
+            return
+
+        Node.get_logger().info(
+            f"[MODE] 전환 요청 {i+1}/{5}: "
+            f"{current} -> {target}",
+        )
+
+        try:
+            client.ChangeMode(target)
+        except RuntimeError as e:
+            Node.get_logger().info(f"[MODE] ChangeMode 오류: {e}")
+
+        # 타임아웃이 발생해도 전환됐을 수 있으므로 확인한다.
+        time.sleep(5)
+
+        try:
+            current = get_mode_retry(client, stop, Node)
+            if current == target:
+                Node.get_logger().info(f"[MODE] 전환 확인 성공: {target}")
+                return
+        except RuntimeError as e:
+            Node.get_logger().error(f"[MODE] 상태 확인 실패: {e}")
+
+        if i + 1 < 5:
+            time.sleep(5)
+
+    raise RuntimeError(
+        f"모드 전환 실패: 목표 모드 {target} 확인 불가"
+    )
+
+
+def wait_until(stop, deadline):
+    while time.monotonic() < deadline:
+        if stop.is_set():
+            return False
+        time.sleep(0.0005)
+    return not stop.is_set()
 
 def main(args=None):
+    stop = threading.Event()
 
     rclpy.init(args=args)
 
     node = KeyboardMoveNode()
 
     try:
-        if node.wait_for_rpc():
+        ChannelFactory.Instance().Init(0, "wlp3s0")
+        client = B1LocoClient()
+        client.Init()
+        node.get_logger().info("[INIT] DDS Discovery 대기")
+        time.sleep(3.0)
+
+        current = get_mode_retry(client, stop, node)
+        node.get_logger().info(f"[INIT] 현재 모드: {current}")
+
+        change_mode_safe(
+                    client,
+                    RobotMode.kWalking,
+                    stop,
+                    node
+                )
+
+
+        if current == RobotMode.kWalking:
             node.run()
 
     except KeyboardInterrupt:
