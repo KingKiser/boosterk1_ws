@@ -60,6 +60,7 @@ int CustomArmExample::run()
     // 1. RPC 연결 및 시작 모드 확인. Walking 상태에서만 동작을 시작한다.
     wait_for([this] {return rpc_->service_is_ready();}, 5s, false,
       "booster_rpc_service unavailable");
+    change_mode(kCustom, false);
     if (get_mode(false) != kWalking) {
       throw std::runtime_error("Start mode must be Walking");
     }
@@ -78,7 +79,6 @@ int CustomArmExample::run()
 
     // 4. 타임아웃이 나도 전환됐을 가능성이 있으므로 요청 전에 복구 필요 여부를 기록한다.
     custom_requested_ = true;
-    change_mode(kCustom, false);
     RCLCPP_INFO(get_logger(), "[MOTION] Prepare: 500 samples, target 500 Hz / 1 s");
     // 5. 현재 자세 → 준비 자세: 500점 선형 보간, 목표 2ms 주기로 약 1초.
     // i/499.0은 첫 점을 현재 자세, 마지막 점을 준비 자세에 정확히 맞춘다.

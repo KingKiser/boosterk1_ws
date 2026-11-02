@@ -338,7 +338,7 @@ def main(args=None):
         current = get_mode_retry(client, stop, node)
         node.get_logger().info(f"[INIT] 현재 모드: {current}")
 
-        if f"{current}" == "RobotMode.kWalking":
+        if current == RobotMode.kWalking:
             node.get_logger().info("Node run")
             node.run()
 

@@ -14,8 +14,7 @@ from booster_robotics_sdk_python import (
     RobotMode,
 )
 
-from booster_py_example import change as G #조인트 각도 어떻게 설정 
-
+from example_package import change as G #조인트 각도 어떻게 설정 
 
 N = 22
 DDS_WAIT = 3.0
@@ -90,7 +89,7 @@ def get_mode_retry(client, stop, Node, attempts=RPC_RETRY):
 
 
 def change_mode_safe(client, target, stop, Node):
-    for i in range(RPC_RETRY):
+    for i in range(5):
         if stop.is_set():
             raise RuntimeError("사용자 정지")
 
@@ -102,7 +101,7 @@ def change_mode_safe(client, target, stop, Node):
             return
 
         Node.get_logger().info(
-            f"[MODE] 전환 요청 {i+1}/{RPC_RETRY}: "
+            f"[MODE] 전환 요청 {i+1}/{5}: "
             f"{current} -> {target}",
         )
 
@@ -112,7 +111,7 @@ def change_mode_safe(client, target, stop, Node):
             Node.get_logger().info(f"[MODE] ChangeMode 오류: {e}")
 
         # 타임아웃이 발생해도 전환됐을 수 있으므로 확인한다.
-        time.sleep(RPC_INTERVAL)
+        time.sleep(5)
 
         try:
             current = get_mode_retry(client, stop, Node)
@@ -122,8 +121,8 @@ def change_mode_safe(client, target, stop, Node):
         except RuntimeError as e:
             Node.get_logger().error(f"[MODE] 상태 확인 실패: {e}")
 
-        if i + 1 < RPC_RETRY:
-            time.sleep(RPC_INTERVAL)
+        if i + 1 < 5:
+            time.sleep(5)
 
     raise RuntimeError(
         f"모드 전환 실패: 목표 모드 {target} 확인 불가"
@@ -162,15 +161,22 @@ def main():
         time.sleep(DDS_WAIT)
 
         # 2. RPC 연결 확인
+
+        change_mode_safe(
+            client,
+            RobotMode.kWalking,
+            stop,
+            node
+        )
+
         current = get_mode_retry(client, stop, node)
         node.get_logger().info(f"[INIT] 현재 모드: {current}")
 
-        if current != RobotMode.kWalking:
+
+        if current != RobotMode.kCustom:
             raise RuntimeError(
                 f"시작 모드가 Walking이 아님: {current}"
             )
-
-
 
         spin_thread = threading.Thread( #나중에 ros 스레드로 바꿀것
             target=rclpy.spin,
@@ -206,22 +212,18 @@ def main():
             f"{np.round(np.degrees(start_angle[[3, 7]]), 1)}"
         )
 
+        change_mode_safe(
+                    client,
+                    RobotMode.kCustom,
+                    stop,
+                    node
+                )
+
         # 6. 현재 자세 명령을 미리 발행
         node.send(start_angle)
         time.sleep(0.1)
 
-        # 7. Custom 모드 전환 및 확인
-        change_mode_safe(
-            client,
-            RobotMode.kCustom,
-            stop,
-            node
-        )
         custom_mode_entered = True
-
-        node.get_logger().info(
-            "Custom 모드 진입 확인"
-        )
 
         # 8. 준비 자세 이동 (2ms x 500)
         start = time.monotonic()
