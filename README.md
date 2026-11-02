@@ -32,6 +32,7 @@ sudo apt install ros-humble-rmw-fastrtps-cpp
 로봇 내부에 fastdds_profile.xml 을 PC로 복사하여 해당 값을 고칩니다
 
 ```bash
+#
 scp booster@<ROBOT_IP>:/opt/booster/BoosterRos2/fastdds_profile.xml ~/fastdds_profile.xml
 ```
 
