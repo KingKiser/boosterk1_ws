@@ -6,6 +6,9 @@
 
 > 사용한 휴머노이드 로봇은 부스터로보틱스의 K1입니다 [booster_K1](https://www.booster.tech/)  
 > 기존 공식 [git](https://github.com/BoosterRobotics/booster_robotics_sdk_ros2) 계정에 있는 코드를 리팩토링 및 상세 가이드를 덧붙혔습니다
+> 해당 리포지토리는 첨부한 [링크](https://github.com/BoosterRobotics/booster_robotics_sdk)에 있는 sdk가 설치가 된 상황을 가정하고 있습니다  
+
+## 반드시 sdk를 먼저 설치해주세요 [https://github.com/BoosterRobotics/booster_robotics_sdk](https://github.com/BoosterRobotics/booster_robotics_sdk)
 
 **Version:** v3  
 **Last Updated:** 2026.11.02  
